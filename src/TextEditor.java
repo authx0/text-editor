@@ -4,6 +4,7 @@ import javax.swing.undo.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import javax.swing.border.EmptyBorder;
 
 /**
  * A simple text editor application with basic functionality.
@@ -14,20 +15,22 @@ public class TextEditor extends JFrame {
     private String currentFile = null;
     private boolean changed = false;
     private UndoManager undoManager;
-    
+    private JButton plusButton;
+    private JPopupMenu optionsMenu;
+
     // Constructor
     public TextEditor() {
         // Set up the frame
         super("Simple Text Editor");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        
+
         // Initialize components
         textArea = new JTextArea();
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
-        
+
         // Add document listener to track changes
         textArea.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) {
@@ -40,30 +43,33 @@ public class TextEditor extends JFrame {
                 changed = true;
             }
         });
-        
+
         // Set up undo manager
         undoManager = new UndoManager();
         textArea.getDocument().addUndoableEditListener(undoManager);
-        
+
         // Set up file chooser
         fileChooser = new JFileChooser();
         fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
-        
+
         // Create scroll pane for text area
         JScrollPane scrollPane = new JScrollPane(textArea);
         add(scrollPane, BorderLayout.CENTER);
-        
+
         // Create menu bar
         createMenuBar();
-        
+
+        // Create plus button with options
+        createPlusButton();
+
         // Make the frame visible
         setVisible(true);
     }
-    
+
     // Create the menu bar with all options
     private void createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
-        
+
         // File menu
         JMenu fileMenu = new JMenu("File");
         JMenuItem newMenuItem = new JMenuItem("New");
@@ -71,20 +77,20 @@ public class TextEditor extends JFrame {
         JMenuItem saveMenuItem = new JMenuItem("Save");
         JMenuItem saveAsMenuItem = new JMenuItem("Save As");
         JMenuItem exitMenuItem = new JMenuItem("Exit");
-        
+
         newMenuItem.addActionListener(e -> newFile());
         openMenuItem.addActionListener(e -> openFile());
         saveMenuItem.addActionListener(e -> saveFile());
         saveAsMenuItem.addActionListener(e -> saveFileAs());
         exitMenuItem.addActionListener(e -> exit());
-        
+
         fileMenu.add(newMenuItem);
         fileMenu.add(openMenuItem);
         fileMenu.add(saveMenuItem);
         fileMenu.add(saveAsMenuItem);
         fileMenu.addSeparator();
         fileMenu.add(exitMenuItem);
-        
+
         // Edit menu
         JMenu editMenu = new JMenu("Edit");
         JMenuItem undoMenuItem = new JMenuItem("Undo");
@@ -94,7 +100,7 @@ public class TextEditor extends JFrame {
         JMenuItem pasteMenuItem = new JMenuItem("Paste");
         JMenuItem findMenuItem = new JMenuItem("Find");
         JMenuItem selectAllMenuItem = new JMenuItem("Select All");
-        
+
         undoMenuItem.addActionListener(e -> undo());
         redoMenuItem.addActionListener(e -> redo());
         cutMenuItem.addActionListener(e -> textArea.cut());
@@ -102,7 +108,7 @@ public class TextEditor extends JFrame {
         pasteMenuItem.addActionListener(e -> textArea.paste());
         findMenuItem.addActionListener(e -> find());
         selectAllMenuItem.addActionListener(e -> textArea.selectAll());
-        
+
         editMenu.add(undoMenuItem);
         editMenu.add(redoMenuItem);
         editMenu.addSeparator();
@@ -112,15 +118,15 @@ public class TextEditor extends JFrame {
         editMenu.addSeparator();
         editMenu.add(findMenuItem);
         editMenu.add(selectAllMenuItem);
-        
+
         // Add menus to menu bar
         menuBar.add(fileMenu);
         menuBar.add(editMenu);
-        
+
         // Set the menu bar
         setJMenuBar(menuBar);
     }
-    
+
     // File operations
     private void newFile() {
         if (confirmSave()) {
@@ -130,7 +136,7 @@ public class TextEditor extends JFrame {
             setTitle("Simple Text Editor");
         }
     }
-    
+
     private void openFile() {
         if (confirmSave()) {
             if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
@@ -152,7 +158,7 @@ public class TextEditor extends JFrame {
             }
         }
     }
-    
+
     private void saveFile() {
         if (currentFile == null) {
             saveFileAs();
@@ -167,7 +173,7 @@ public class TextEditor extends JFrame {
             }
         }
     }
-    
+
     private void saveFileAs() {
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
@@ -183,13 +189,13 @@ public class TextEditor extends JFrame {
             }
         }
     }
-    
+
     private void exit() {
         if (confirmSave()) {
             System.exit(0);
         }
     }
-    
+
     // Edit operations
     private void undo() {
         try {
@@ -200,7 +206,7 @@ public class TextEditor extends JFrame {
             // Ignore
         }
     }
-    
+
     private void redo() {
         try {
             if (undoManager.canRedo()) {
@@ -210,15 +216,15 @@ public class TextEditor extends JFrame {
             // Ignore
         }
     }
-    
+
     private void find() {
         String searchText = JOptionPane.showInputDialog(this, 
             "Enter text to search:", "Find", JOptionPane.QUESTION_MESSAGE);
-        
+
         if (searchText != null && !searchText.isEmpty()) {
             String text = textArea.getText();
             int index = text.indexOf(searchText);
-            
+
             if (index != -1) {
                 textArea.setCaretPosition(index);
                 textArea.select(index, index + searchText.length());
@@ -228,14 +234,14 @@ public class TextEditor extends JFrame {
             }
         }
     }
-    
+
     // Helper methods
     private boolean confirmSave() {
         if (changed) {
             int option = JOptionPane.showConfirmDialog(this, 
                 "The current file has been modified. Save changes?", 
                 "Save Changes", JOptionPane.YES_NO_CANCEL_OPTION);
-            
+
             if (option == JOptionPane.YES_OPTION) {
                 saveFile();
                 return !changed; // Return false if save failed
@@ -245,21 +251,93 @@ public class TextEditor extends JFrame {
         }
         return true;
     }
-    
+
     // Getters for testing
     public JTextArea getTextArea() {
         return textArea;
     }
-    
+
     public String getCurrentFile() {
         return currentFile;
     }
-    
+
     public boolean isChanged() {
         return changed;
     }
-    
+
     public void setChanged(boolean changed) {
         this.changed = changed;
+    }
+
+    // Create plus button with options menu
+    private void createPlusButton() {
+        // Create plus button
+        plusButton = new JButton("+");
+        plusButton.setFont(new Font("Arial", Font.BOLD, 16));
+        plusButton.setForeground(new Color(0, 120, 215));
+        plusButton.setBackground(Color.WHITE);
+        plusButton.setBorder(new EmptyBorder(5, 10, 5, 10));
+        plusButton.setFocusPainted(false);
+        plusButton.setToolTipText("Click or hover for options");
+
+        // Create options menu
+        optionsMenu = new JPopupMenu();
+        JMenuItem createSpreadsheetItem = new JMenuItem("Create Spreadsheet");
+        JMenuItem addCodeItem = new JMenuItem("Add Code");
+
+        // Add action listeners
+        createSpreadsheetItem.addActionListener(e -> {
+            JOptionPane.showMessageDialog(this, 
+                "Creating a new spreadsheet...", 
+                "Create Spreadsheet", JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        addCodeItem.addActionListener(e -> {
+            String codeSnippet = "// Add your code here\n";
+            textArea.insert(codeSnippet, textArea.getCaretPosition());
+        });
+
+        // Add items to menu
+        optionsMenu.add(createSpreadsheetItem);
+        optionsMenu.add(addCodeItem);
+
+        // Add action listener for click
+        plusButton.addActionListener(e -> {
+            optionsMenu.show(plusButton, 0, -optionsMenu.getPreferredSize().height);
+        });
+
+        // Add mouse listeners for hover effect
+        plusButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                optionsMenu.show(plusButton, 0, -optionsMenu.getPreferredSize().height);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                // Hide menu only if mouse is not over the menu
+                Point p = e.getPoint();
+                p = SwingUtilities.convertPoint(plusButton, p, optionsMenu);
+                if (!optionsMenu.contains(p)) {
+                    optionsMenu.setVisible(false);
+                }
+            }
+        });
+
+        // Add mouse listener to the menu to hide it when mouse exits
+        optionsMenu.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseExited(MouseEvent e) {
+                optionsMenu.setVisible(false);
+            }
+        });
+
+        // Create a panel for the button and position it at the bottom right
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setBackground(Color.WHITE);
+        buttonPanel.add(plusButton);
+
+        // Add the panel to the bottom of the frame
+        add(buttonPanel, BorderLayout.SOUTH);
     }
 }
