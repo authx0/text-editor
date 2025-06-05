@@ -53,6 +53,9 @@ public class TextEditorTest {
             // Test basic text editing
             testBasicTextEditing();
 
+            // Test toolbar existence
+            testToolbarExists();
+
             System.out.println("All tests passed!");
         } catch (AssertionError e) {
             System.err.println("TEST FAILED: " + e.getMessage());
@@ -153,6 +156,71 @@ public class TextEditorTest {
                 return;
             } else if (component instanceof Container) {
                 findTextAreaComponent((Container) component, result);
+                if (result[0] != null) {
+                    return;
+                }
+            }
+        }
+    }
+
+    /**
+     * Test that the toolbar exists and has the expected buttons.
+     */
+    private static void testToolbarExists() throws Exception {
+        System.out.println("Testing toolbar existence...");
+
+        // Create the text editor on the EDT
+        final JFrame[] editorFrame = new JFrame[1];
+        final JToolBar[] toolbar = new JToolBar[1];
+
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                Class<?> textEditorClass = Class.forName("TextEditor");
+                editorFrame[0] = (JFrame) textEditorClass.newInstance();
+                editorFrame[0].setVisible(false);
+
+                // Find the toolbar component
+                findToolbarComponent(editorFrame[0], toolbar);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to create TextEditor: " + e.getMessage(), e);
+            }
+        });
+
+        assertNotNull("Toolbar component should not be null", toolbar[0]);
+
+        // Verify toolbar orientation
+        final int[] orientation = new int[1];
+        SwingUtilities.invokeAndWait(() -> {
+            orientation[0] = toolbar[0].getOrientation();
+        });
+
+        assertEquals("Toolbar should be vertical", JToolBar.VERTICAL, orientation[0]);
+
+        // Verify toolbar has buttons
+        final int[] componentCount = new int[1];
+        SwingUtilities.invokeAndWait(() -> {
+            componentCount[0] = toolbar[0].getComponentCount();
+        });
+
+        assertTrue("Toolbar should have at least 5 buttons", componentCount[0] >= 5);
+
+        // Clean up
+        SwingUtilities.invokeAndWait(() -> {
+            editorFrame[0].dispose();
+        });
+    }
+
+    /**
+     * Helper method to find the JToolBar component in the frame.
+     */
+    private static void findToolbarComponent(Container container, JToolBar[] result) {
+        Component[] components = container.getComponents();
+        for (Component component : components) {
+            if (component instanceof JToolBar) {
+                result[0] = (JToolBar) component;
+                return;
+            } else if (component instanceof Container) {
+                findToolbarComponent((Container) component, result);
                 if (result[0] != null) {
                     return;
                 }

@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 
 /**
  * A simple text editor application with basic functionality.
@@ -17,6 +18,14 @@ public class TextEditor extends JFrame {
     private UndoManager undoManager;
     private JButton plusButton;
     private JPopupMenu optionsMenu;
+
+    // Toolbar components
+    private JToolBar toolBar;
+    private JButton drawButton;
+    private JButton textButton;
+    private JButton highlightButton;
+    private JButton eraseButton;
+    private JButton selectButton;
 
     // Constructor
     public TextEditor() {
@@ -58,6 +67,9 @@ public class TextEditor extends JFrame {
 
         // Create menu bar
         createMenuBar();
+
+        // Create toolbar
+        createToolbar();
 
         // Create plus button with options
         createPlusButton();
@@ -267,6 +279,65 @@ public class TextEditor extends JFrame {
 
     public void setChanged(boolean changed) {
         this.changed = changed;
+    }
+
+    // Create toolbar with editing tools
+    private void createToolbar() {
+        // Create vertical toolbar
+        toolBar = new JToolBar(JToolBar.VERTICAL);
+        toolBar.setFloatable(false);
+        toolBar.setBackground(Color.WHITE);
+        toolBar.setBorder(new LineBorder(new Color(220, 220, 220), 1));
+
+        // Create toolbar buttons with icons
+        drawButton = createToolbarButton("Draw", "\u270F"); // Pencil symbol
+        textButton = createToolbarButton("Text", "T");
+        highlightButton = createToolbarButton("Highlight", "\u2591"); // Shade symbol
+        eraseButton = createToolbarButton("Erase", "\u232B"); // Erase symbol
+        selectButton = createToolbarButton("Select", "\u25FB"); // Empty square symbol
+
+        // Add buttons to toolbar
+        toolBar.add(drawButton);
+        toolBar.add(textButton);
+        toolBar.add(highlightButton);
+        toolBar.add(eraseButton);
+        toolBar.add(selectButton);
+
+        // Add toolbar to the frame
+        add(toolBar, BorderLayout.WEST);
+    }
+
+    // Helper method to create toolbar buttons
+    private JButton createToolbarButton(String toolTip, String symbol) {
+        JButton button = new JButton(symbol);
+        button.setFont(new Font("Arial", Font.BOLD, 16));
+        button.setForeground(Color.DARK_GRAY);
+        button.setBackground(Color.WHITE);
+        button.setBorder(new EmptyBorder(10, 10, 10, 10));
+        button.setFocusPainted(false);
+        button.setToolTipText(toolTip);
+
+        // Add action listener
+        button.addActionListener(e -> {
+            JOptionPane.showMessageDialog(this, 
+                toolTip + " tool selected", 
+                "Tool Selection", JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        // Add hover effect
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(new Color(240, 240, 240));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(Color.WHITE);
+            }
+        });
+
+        return button;
     }
 
     // Create plus button with options menu
