@@ -4,6 +4,7 @@ import javax.swing.undo.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.util.ArrayList;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 
@@ -19,13 +20,17 @@ public class TextEditor extends JFrame {
     private JButton plusButton;
     private JPopupMenu optionsMenu;
 
+    // Drawing canvas
+    private DrawingCanvas canvas;
+    private JPanel contentPanel;
+    private CardLayout cardLayout;
+    private static final String TEXT_CARD = "TEXT_EDITOR";
+    private static final String CANVAS_CARD = "DRAWING_CANVAS";
+
     // Toolbar components
     private JToolBar toolBar;
     private JButton drawButton;
     private JButton textButton;
-    private JButton highlightButton;
-    private JButton eraseButton;
-    private JButton selectButton;
 
     // Constructor
     public TextEditor() {
@@ -63,7 +68,20 @@ public class TextEditor extends JFrame {
 
         // Create scroll pane for text area
         JScrollPane scrollPane = new JScrollPane(textArea);
-        add(scrollPane, BorderLayout.CENTER);
+
+        // Initialize drawing canvas
+        canvas = new DrawingCanvas();
+
+        // Set up card layout for switching between text area and canvas
+        cardLayout = new CardLayout();
+        contentPanel = new JPanel(cardLayout);
+        contentPanel.add(scrollPane, TEXT_CARD);
+        contentPanel.add(canvas, CANVAS_CARD);
+
+        // Show text editor by default
+        cardLayout.show(contentPanel, TEXT_CARD);
+
+        add(contentPanel, BorderLayout.CENTER);
 
         // Create menu bar
         createMenuBar();
@@ -292,16 +310,10 @@ public class TextEditor extends JFrame {
         // Create toolbar buttons with icons
         drawButton = createToolbarButton("Draw", "\u270F"); // Pencil symbol
         textButton = createToolbarButton("Text", "T");
-        highlightButton = createToolbarButton("Highlight", "\u2591"); // Shade symbol
-        eraseButton = createToolbarButton("Erase", "\u232B"); // Erase symbol
-        selectButton = createToolbarButton("Select", "\u25FB"); // Empty square symbol
 
         // Add buttons to toolbar
         toolBar.add(drawButton);
         toolBar.add(textButton);
-        toolBar.add(highlightButton);
-        toolBar.add(eraseButton);
-        toolBar.add(selectButton);
 
         // Add toolbar to the frame
         add(toolBar, BorderLayout.WEST);
@@ -319,25 +331,185 @@ public class TextEditor extends JFrame {
 
         // Add action listener
         button.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, 
-                toolTip + " tool selected", 
-                "Tool Selection", JOptionPane.INFORMATION_MESSAGE);
+            // Reset all button backgrounds
+            drawButton.setBackground(Color.WHITE);
+            textButton.setBackground(Color.WHITE);
+
+            // Set this button as selected
+            button.setBackground(new Color(220, 220, 255));
+
+            // Implement specific tool functionality
+            switch (toolTip) {
+                case "Draw":
+                    implementDrawTool();
+                    break;
+                case "Text":
+                    implementTextTool();
+                    break;
+            }
         });
 
         // Add hover effect
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                button.setBackground(new Color(240, 240, 240));
+                if (button.getBackground().equals(Color.WHITE)) {
+                    button.setBackground(new Color(240, 240, 240));
+                }
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                button.setBackground(Color.WHITE);
+                if (button.getBackground().equals(new Color(240, 240, 240))) {
+                    button.setBackground(Color.WHITE);
+                }
             }
         });
 
         return button;
+    }
+
+    // Tool implementation methods
+    private void implementDrawTool() {
+        // Switch to canvas view
+        cardLayout.show(contentPanel, CANVAS_CARD);
+    }
+
+    private void implementTextTool() {
+        // Switch to text editor view
+        cardLayout.show(contentPanel, TEXT_CARD);
+
+        textArea.setCursor(new Cursor(Cursor.TEXT_CURSOR));
+
+        // Remove any existing mouse listeners
+        for (MouseListener ml : textArea.getMouseListeners()) {
+            if (ml instanceof TextMouseListener) {
+                textArea.removeMouseListener(ml);
+            }
+        }
+
+        // Add text mouse listener
+        textArea.addMouseListener(new TextMouseListener());
+    }
+
+
+    // Mouse listener classes for each tool
+
+    private class TextMouseListener extends MouseAdapter {
+        @Override
+        public void mousePressed(MouseEvent e) {
+            int pos = textArea.viewToModel2D(e.getPoint());
+            textArea.setCaretPosition(pos);
+        }
+    }
+
+
+    /**
+     * A canvas for drawing with the mouse.
+     */
+    private class DrawingCanvas extends JPanel {
+        private ArrayList<Point> points = new ArrayList<>();
+        private ArrayList<ArrayList<Point>> lines = new ArrayList<>();
+        private boolean isDrawing = false;
+
+        public DrawingCanvas() {
+            setBackground(Color.WHITE);
+
+            // Add mouse listeners for drawing
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    isDrawing = true;
+                    points = new ArrayList<>();
+                    points.add(e.getPoint());
+                    repaint();
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    isDrawing = false;
+                    if (!points.isEmpty()) {
+                        lines.add(new ArrayList<>(points));
+                    }
+                }
+            });
+
+            addMouseMotionListener(new MouseMotionAdapter() {
+                @Override
+                public void mouseDragged(MouseEvent e) {
+                    if (isDrawing) {
+                        points.add(e.getPoint());
+                        repaint();
+                    }
+                }
+            });
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) g;
+
+            // Set rendering hints for smoother lines
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setStroke(new BasicStroke(2));
+            g2d.setColor(Color.BLACK);
+
+            // Draw all saved lines
+            for (ArrayList<Point> line : lines) {
+                drawLine(g2d, line);
+            }
+
+            // Draw the current line
+            if (!points.isEmpty()) {
+                drawLine(g2d, points);
+            }
+        }
+
+        private void drawLine(Graphics2D g2d, ArrayList<Point> points) {
+            if (points.size() < 2) return;
+
+            for (int i = 0; i < points.size() - 1; i++) {
+                Point p1 = points.get(i);
+                Point p2 = points.get(i + 1);
+                g2d.drawLine(p1.x, p1.y, p2.x, p2.y);
+            }
+        }
+
+        public void clear() {
+            points.clear();
+            lines.clear();
+            repaint();
+        }
+    }
+
+    // Method to open a spreadsheet in a new tab/window
+    private void openSpreadsheet() {
+        // Create a new JFrame for the spreadsheet
+        JFrame spreadsheetFrame = new JFrame("Spreadsheet");
+        spreadsheetFrame.setSize(600, 400);
+        spreadsheetFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        // Create a table to represent the spreadsheet
+        String[] columnNames = {"A", "B", "C", "D", "E", "F", "G", "H"};
+        Object[][] data = new Object[20][8]; // 20 rows, 8 columns
+
+        // Initialize with empty cells
+        for (int i = 0; i < 20; i++) {
+            for (int j = 0; j < 8; j++) {
+                data[i][j] = "";
+            }
+        }
+
+        JTable table = new JTable(data, columnNames);
+        table.setFillsViewportHeight(true);
+
+        // Add table to a scroll pane
+        JScrollPane scrollPane = new JScrollPane(table);
+        spreadsheetFrame.add(scrollPane);
+
+        // Make the frame visible
+        spreadsheetFrame.setVisible(true);
     }
 
     // Create plus button with options menu
@@ -349,18 +521,25 @@ public class TextEditor extends JFrame {
         plusButton.setBackground(Color.WHITE);
         plusButton.setBorder(new EmptyBorder(5, 10, 5, 10));
         plusButton.setFocusPainted(false);
-        plusButton.setToolTipText("Click or hover for options");
+        plusButton.setToolTipText("Click for options");
 
         // Create options menu
         optionsMenu = new JPopupMenu();
+        JMenuItem uploadImageItem = new JMenuItem("Upload Image");
         JMenuItem createSpreadsheetItem = new JMenuItem("Create Spreadsheet");
         JMenuItem addCodeItem = new JMenuItem("Add Code");
 
         // Add action listeners
+        uploadImageItem.addActionListener(e -> {
+            if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                JOptionPane.showMessageDialog(this, 
+                    "Image uploaded: " + fileChooser.getSelectedFile().getName(), 
+                    "Upload Image", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+
         createSpreadsheetItem.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, 
-                "Creating a new spreadsheet...", 
-                "Create Spreadsheet", JOptionPane.INFORMATION_MESSAGE);
+            openSpreadsheet();
         });
 
         addCodeItem.addActionListener(e -> {
@@ -369,6 +548,7 @@ public class TextEditor extends JFrame {
         });
 
         // Add items to menu
+        optionsMenu.add(uploadImageItem);
         optionsMenu.add(createSpreadsheetItem);
         optionsMenu.add(addCodeItem);
 
@@ -377,31 +557,21 @@ public class TextEditor extends JFrame {
             optionsMenu.show(plusButton, 0, -optionsMenu.getPreferredSize().height);
         });
 
-        // Add mouse listeners for hover effect
+        // Add hover effect for visual feedback
         plusButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                optionsMenu.show(plusButton, 0, -optionsMenu.getPreferredSize().height);
+                plusButton.setBackground(new Color(240, 240, 255));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                // Hide menu only if mouse is not over the menu
-                Point p = e.getPoint();
-                p = SwingUtilities.convertPoint(plusButton, p, optionsMenu);
-                if (!optionsMenu.contains(p)) {
-                    optionsMenu.setVisible(false);
-                }
+                plusButton.setBackground(Color.WHITE);
             }
         });
 
-        // Add mouse listener to the menu to hide it when mouse exits
-        optionsMenu.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseExited(MouseEvent e) {
-                optionsMenu.setVisible(false);
-            }
-        });
+        // We want the menu to stay visible when mouse moves away
+        // No need to add a mouseExited listener
 
         // Create a panel for the button and position it at the bottom right
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
