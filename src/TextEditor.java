@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 
+// Chatbot window
+
 /**
  * A simple text editor application with basic functionality.
  */
@@ -530,6 +532,7 @@ public class TextEditor extends JFrame {
         JMenuItem uploadImageItem = new JMenuItem("Upload Image");
         JMenuItem createSpreadsheetItem = new JMenuItem("Create Spreadsheet");
         JMenuItem addCodeItem = new JMenuItem("Add Code");
+        JMenuItem openChatbotItem = new JMenuItem("Open Chatbot");
 
         // Add action listeners
         uploadImageItem.addActionListener(e -> {
@@ -549,10 +552,15 @@ public class TextEditor extends JFrame {
             textArea.insert(codeSnippet, textArea.getCaretPosition());
         });
 
+        openChatbotItem.addActionListener(e -> {
+            SwingUtilities.invokeLater(() -> new ChatbotWindow().setVisible(true));
+        });
+
         // Add items to menu
         optionsMenu.add(uploadImageItem);
         optionsMenu.add(createSpreadsheetItem);
         optionsMenu.add(addCodeItem);
+        optionsMenu.add(openChatbotItem);
 
         // Add action listener for click
         plusButton.addActionListener(e -> {
