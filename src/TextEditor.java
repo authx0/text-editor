@@ -161,6 +161,7 @@ public class TextEditor extends JFrame {
     private void newFile() {
         if (confirmSave()) {
             textArea.setText("");
+            undoManager.discardAllEdits();
             currentFile = null;
             changed = false;
             setTitle("Simple Text Editor");
@@ -177,6 +178,7 @@ public class TextEditor extends JFrame {
                     while ((line = reader.readLine()) != null) {
                         textArea.append(line + "\n");
                     }
+                    undoManager.discardAllEdits();
                     currentFile = file.getPath();
                     changed = false;
                     setTitle("Simple Text Editor - " + file.getName());
