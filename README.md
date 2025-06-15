@@ -8,6 +8,7 @@ A simple text editor application written in Java using Swing.
 - File operations (new, open, save, save as)
 - Edit operations (undo, redo, cut, copy, paste, find, select all)
 - Change tracking to prompt for saving unsaved changes
+- Basic chatbot accessible from the plus menu
 
 ## Project Structure
 
